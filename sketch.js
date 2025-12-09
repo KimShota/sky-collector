@@ -1,12 +1,12 @@
-let gameState = "LANDING"; // LANDING, INSTRUCTIONS, START, PLAYING, GAMEOVER
+let gameState = "LANDING"; // game state to control the game
 let plane;
 let stars = [];
 let bombs = [];
 let score = 0;
-let hearts = 3;
+let hearts = 3; // set the number of hearts to 3
 let starTimer = 0;
 let bombTimer = 0;
-let boostEnergy = 100; 
+let boostEnergy = 100; // boost energy to boost the plane up
 let boostRecoveryRate = 0.15;
 let boostDrainRate = 1.5;
 let difficulty = 1;
@@ -20,67 +20,68 @@ let nameInput;
 let leaderboard = [];
 let showLeaderboard = false;
 let buttonPressed = false;
-let selectedMode = ""; // "collection" or "story"
+let selectedMode = "";
 let collectionButton, storyButton;
 let leaderboardButton;
-let lastUnlockedSkinCount = 1; // Track last unlocked skin count for animation
-let unlockAnimation = null; // Animation object for skin unlock
-let newlyUnlockedSkins = []; // Track newly unlocked skins that need to be selected
-let skinChangeAllowed = false; // Only allow skin change when new skin is unlocked and selected
-let highestScore = 0; // Track highest score for skin unlocking
+let lastUnlockedSkinCount = 1;
+let unlockAnimation = null;
+let newlyUnlockedSkins = [];
+let skinChangeAllowed = false;
+let highestScore = 0;
 
-
-// Serial communication for accelerometer
+// variables for serial communication
 let port;
 let connectButton;
 let baudrate = 9600;
-let sensorValue = 337; // Default center value (675/2 ≈ 337)
+let sensorValue = 337;
 let useSensor = false;
 
-// Base dimensions for responsive scaling
+// dimensions for responsive scaling
 const BASE_WIDTH = 800;
 const BASE_HEIGHT = 600;
 
 // variables for sprites 
 let spritesheet;
-let sprites = []; // 2D array for all sprites
-let airplaneSkins = []; // Array of selected airplane skin images
-let unlockedSkins = [0]; // Array of unlocked skin indices (0 is always unlocked)
-let showSkinSelection = false; // Flag to show/hide skin selection UI 
+let sprites = [];
+let airplaneSkins = []; // array to store airplane skins
+let unlockedSkins = [0];
+let showSkinSelection = false;
 
-// Background music variables
-let bgMusicMenu; // studio_ghibli.mp3 for non-playing modes
-let bgMusicPlaying; // spirited_away1.mp3 for playing mode
+// variables for background music
+let bgMusicMenu;
+let bgMusicPlaying;
 let previousGameState = "";
-let isFadingOut = false;
+let isFadingOut = false; // flag to check if the background music is fading out or not
 let isFadingIn = false;
 let fadeSpeed = 0.02;
-let targetVolume = 0.5; // Volume level (0.0 to 1.0)
+let targetVolume = 0.5;
 
+// function to preload the images and audio files 
 function preload(){
   spritesheet = loadImage("planes.png");
   bgMusicMenu = loadSound("studio_ghibli.mp3");
   bgMusicPlaying = loadSound("spirited_away1.mp3");
 }
 
-// ------------------------------
-// Control Input
-// ------------------------------
+// function to control the airplane's movement 
 function updateControls() {
   let moveUp = false;
   let moveDown = false;
+  // detect whether the space bar or the button is pressed or not
   let boosting = keyIsDown(32) || buttonPressed;
   
+  // if the sensor is connected and the port is open
   if (useSensor && port && port.opened()) {
-    // Use accelerometer sensor value (0-675) to control plane
-    // Map sensor value to screen height
-    // Sensor center (337.5) = screen center
+    // center the sensor value to 337.5
     let sensorCenter = 337.5;
+    // map the sensor value from the accelerometer to the plane's y position 
     let targetY = map(sensorValue, 285, 380, plane.size / 2, height - plane.size / 2);
+    // store the current y position of the plane
     let currentY = plane.y;
+    // get the difference 
     let diff = targetY - currentY;
     
-    // Smooth movement with threshold (adjust threshold for responsiveness)
+    // the plane only moves if the difference is larger than the threshold 
     let threshold = 3;
     if (abs(diff) > threshold) {
       if (diff > 0) {
@@ -90,7 +91,7 @@ function updateControls() {
       }
     }
   } else {
-    // Fallback to keyboard controls
+    // if the sensor is not connected, then use keyboards to control
     moveUp = keyIsDown(UP_ARROW);
     moveDown = keyIsDown(DOWN_ARROW);
   }

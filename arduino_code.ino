@@ -1,65 +1,57 @@
-// ===============================
-// Arduino Code for ADXL335 + Button + LEDs
-// ===============================
-// ADXL335 X-axis on A0
+// pin to read button press 
 const int buttonPin = 2;
 
-// LEDs
-const int led1 = 8;   // choose any digital pin
+// LED pints to light up when stars are collected
+const int led1 = 8;
 const int led2 = 9;
 
-// LED timing variables
-unsigned long ledOnTime = 0;  // When LED was turned on
-const unsigned long ledDuration = 500;  // LED stays on for 500ms
+unsigned long ledOnTime = 0;  // record when the LED turns on 
+const unsigned long ledDuration = 500;  // LEDs turn on after 500ms
 
 void setup() {
   Serial.begin(9600);
-  pinMode(buttonPin, INPUT);    // physical pull-down
-  pinMode(led1, OUTPUT);
+  pinMode(buttonPin, INPUT); // set to input since we want to send sensor values 
+  pinMode(led1, OUTPUT); 
   pinMode(led2, OUTPUT);
-  digitalWrite(led1, LOW);
+  digitalWrite(led1, LOW); // turn off first
   digitalWrite(led2, LOW);
 }
 
 void loop() {
-  // -----------------------------
-  // 1. SEND SENSOR VALUES
-  // -----------------------------
-  int x = analogRead(A0);
-  int btn = digitalRead(buttonPin);
-  Serial.print("ACC:");
-  Serial.print(x);
+  int x = analogRead(A0); // read accelerometer value (0 to 1023)
+  int btn = digitalRead(buttonPin); // read the button state 
+  Serial.print("ACC:"); 
+  Serial.print(x); // print accelerometer value
   Serial.print(",BTN:");
-  Serial.println(btn);
+  Serial.println(btn); // print the button state (1 if is's pressed)
 
-  // -----------------------------
-  // 2. LISTEN FOR COMMANDS FROM P5.JS
-  // -----------------------------
   if (Serial.available()) {
-    char c = Serial.read();
-    if (c == '1') {
-      // Star collected - turn on LEDs
+    char c = Serial.read(); // gets one character from p5
+    if (c == '1') { // if it is 1
+      // turn on the LED pins
       digitalWrite(led1, HIGH);
       digitalWrite(led2, HIGH);
-      ledOnTime = millis();  // Record when LEDs were turned on
+      // save the time so that LEDs can turn off automatically after 500 ms
+      ledOnTime = millis();
     }
-    if (c == '0') {
-      // Turn off LEDs immediately
+    if (c == '0') { // if it is 0
+      // turn off the LEDs 
       digitalWrite(led1, LOW);
       digitalWrite(led2, LOW);
-      ledOnTime = 0;  // Reset timer
+      // reset the timer to 0
+      ledOnTime = 0;
     }
   }
 
-  // -----------------------------
-  // 3. AUTO TURN OFF LEDs AFTER DURATION
-  // -----------------------------
+  // if the LED has been lighting up for more than 500 ms
   if (ledOnTime > 0 && (millis() - ledOnTime) >= ledDuration) {
+    // turn both off
     digitalWrite(led1, LOW);
     digitalWrite(led2, LOW);
-    ledOnTime = 0;  // Reset timer
+    ledOnTime = 0;
   }
 
-  delay(100);  // ~50Hz data rate
+  // set delay to 100 so that plane on p5 won't be too sensitive 
+  delay(100);
 }
 
