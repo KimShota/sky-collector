@@ -64,244 +64,6 @@ function preload(){
 }
 
 // ------------------------------
-// Cloud Class
-// ------------------------------
-class Cloud {
-  constructor() {
-    this.x = random(width);
-    this.y = random(height * 0.3, height * 0.7);
-    this.size = random(60, 120);
-    this.speed = random(0.3, 0.8);
-  }
-
-  update() {
-    this.x -= this.speed;
-    if (this.x < -this.size) {
-      this.x = width + this.size;
-      this.y = random(height * 0.3, height * 0.7);
-    }
-  }
-
-  draw() {
-    push();
-    translate(this.x, this.y);
-    scale(getScale());
-    fill(255, 255, 255, 200);
-    noStroke();
-    
-    // Soft cloud shape
-    ellipse(0, 0, this.size, this.size * 0.6);
-    ellipse(-this.size * 0.3, 0, this.size * 0.7, this.size * 0.5);
-    ellipse(this.size * 0.3, 0, this.size * 0.7, this.size * 0.5);
-    ellipse(0, -this.size * 0.2, this.size * 0.6, this.size * 0.4);
-    
-    pop();
-  }
-}
-
-// ------------------------------
-// Plane Class
-// ------------------------------
-class Plane {
-  constructor() {
-    this.x = 100;
-    this.y = height / 2;
-    this.size = 120;
-    this.speed = 5;
-    this.skin = 0;
-  }
-
-  update(moveUp, moveDown) {
-    if (moveUp) this.y -= this.speed;
-    if (moveDown) this.y += this.speed;
-
-    this.y = constrain(this.y, this.size / 2, height - this.size / 2);
-  }
-
-  draw() {
-    push();
-    translate(this.x, this.y);
-    scale(getScale());
-    
-    // Design based on skin
-    this.drawSkin();
-    
-    pop();
-  }
-
-  drawSkin() {
-    // Draw sprite image if available
-    if (airplaneSkins.length > 0 && this.skin >= 0 && this.skin < airplaneSkins.length) {
-      let skinImg = airplaneSkins[this.skin];
-      if (skinImg) {
-        imageMode(CENTER);
-        let targetSize = this.size; 
-        let scaleFactor = (targetSize * 0.8) / max(skinImg.width, skinImg.height);
-        image(skinImg, 0, 0, skinImg.width * scaleFactor, skinImg.height * scaleFactor);
-        return;
-      }
-    }
-    
-    // Fallback to default drawing if sprite not available
-    let sw = 2 / getScale();
-    fill(255, 200, 0);
-    stroke(0);
-    strokeWeight(sw);
-    triangle(-15, 0, 20, 0, 10, -5);
-    rect(-10, -5, 25, 10);
-    fill(200, 200, 255);
-    triangle(-5, -5, -5, -20, 5, -5);
-    triangle(-5, 5, -5, 20, 5, 5);
-  }
-
-  setSkin(skinIndex) {
-    this.skin = skinIndex;
-  }
-
-  reset() {
-    this.x = 100;
-    this.y = height / 2;
-  }
-
-  collidesWith(obj) {
-    let d = dist(this.x, this.y, obj.x, obj.y);
-    return d < (this.size / 2 + obj.size / 2);
-  }
-}
-
-// ------------------------------
-// Star Class
-// ------------------------------
-class Star {
-  constructor() {
-    this.x = width + 20;
-    this.y = random(50, height - 50);
-    this.size = 25;
-    this.speed = 3;
-    this.rotation = 0;
-  }
-
-  update() {
-    let speedMultiplier = boostEnergy > 0 && (keyIsDown(32) || buttonPressed) ? 2 : 1;
-    this.x -= this.speed * difficulty * speedMultiplier;
-    this.rotation += 0.05;
-  }
-
-  draw() {
-    push();
-    translate(this.x, this.y);
-    scale(getScale());
-    rotate(this.rotation);
-    fill(255, 255, 0);
-    stroke(255, 200, 0);
-    strokeWeight(2 / getScale());
-
-    beginShape();
-    for (let i = 0; i < 5; i++) {
-      let angle = TWO_PI / 5 * i - HALF_PI;
-      vertex(cos(angle) * this.size, sin(angle) * this.size);
-
-      angle = TWO_PI / 5 * (i + 0.5) - HALF_PI;
-      vertex(cos(angle) * this.size * 0.5, sin(angle) * this.size * 0.5);
-    }
-    endShape(CLOSE);
-
-    pop();
-  }
-
-  offScreen() {
-    return this.x < -50;
-  }
-}
-
-// ------------------------------
-// Bomb Class
-// ------------------------------
-class Bomb {
-  constructor() {
-    this.x = width + 20;
-    this.y = random(50, height - 50);
-    this.size = 30;
-    this.speed = 3;
-  }
-
-  update() {
-    let speedMultiplier = boostEnergy > 0 && (keyIsDown(32) || buttonPressed) ? 2 : 1;
-    this.x -= this.speed * difficulty * speedMultiplier;
-  }
-
-  draw() {
-    push();
-    translate(this.x, this.y);
-    scale(getScale());
-
-    fill(40, 40, 40);
-    stroke(0);
-    strokeWeight(2 / getScale());
-    circle(0, 0, this.size);
-
-    fill(255, 0, 0);
-    noStroke();
-    circle(0, 0, this.size * 0.6);
-
-    stroke(100, 50, 0);
-    strokeWeight(3 / getScale());
-    line(0, -this.size / 2, 5, -this.size / 2 - 10);
-
-    fill(255, 200, 0);
-    noStroke();
-    circle(5, -this.size / 2 - 10, 5);
-
-    pop();
-  }
-
-  offScreen() {
-    return this.x < -50;
-  }
-}
-
-// ------------------------------
-// HeartItem Class
-// ------------------------------
-class HeartItem {
-  constructor() {
-    this.x = width + 20;
-    this.y = random(50, height - 50);
-    this.size = 25;
-    this.speed = 3;
-    this.pulse = 0;
-  }
-
-  update() {
-    let speedMultiplier = boostEnergy > 0 && (keyIsDown(32) || buttonPressed) ? 2 : 1;
-    this.x -= this.speed * difficulty * speedMultiplier;
-    this.pulse += 0.1;
-  }
-
-  draw() {
-    push();
-    translate(this.x, this.y);
-    scale(getScale());
-    let pulseSize = this.size + sin(this.pulse) * 3;
-
-    fill(255, 100, 150);
-    stroke(255, 0, 100);
-    strokeWeight(2 / getScale());
-    beginShape();
-    vertex(0, pulseSize * 0.3);
-    bezierVertex(-pulseSize * 0.5, -pulseSize * 0.3, -pulseSize * 0.8, 0, 0, pulseSize * 0.8);
-    bezierVertex(pulseSize * 0.8, 0, pulseSize * 0.5, -pulseSize * 0.3, 0, pulseSize * 0.3);
-    endShape(CLOSE);
-
-    pop();
-  }
-
-  offScreen() {
-    return this.x < -50;
-  }
-}
-
-// ------------------------------
 // Control Input
 // ------------------------------
 function updateControls() {
@@ -314,7 +76,7 @@ function updateControls() {
     // Map sensor value to screen height
     // Sensor center (337.5) = screen center
     let sensorCenter = 337.5;
-    let targetY = map(sensorValue, 270, 390, plane.size / 2, height - plane.size / 2);
+    let targetY = map(sensorValue, 285, 380, plane.size / 2, height - plane.size / 2);
     let currentY = plane.y;
     let diff = targetY - currentY;
     
@@ -329,8 +91,8 @@ function updateControls() {
     }
   } else {
     // Fallback to keyboard controls
-    moveUp = keyIsDown(UP_ARROW) || keyIsDown(87);
-    moveDown = keyIsDown(DOWN_ARROW) || keyIsDown(83);
+    moveUp = keyIsDown(UP_ARROW);
+    moveDown = keyIsDown(DOWN_ARROW);
   }
   
   return { moveUp, moveDown, boosting };
@@ -980,18 +742,18 @@ function drawLandingPage() {
   textAlign(CENTER, CENTER);
   textSize(scaleSize(56));
   textFont('serif');
-  text("Sky Collector", width / 2, height / 2 - scaleSize(200));
+  text("Tokyo Flight", width / 2, height / 2 - scaleSize(200));
   
   textSize(scaleSize(32));
   fill(255, 255, 240);
-  text("Flight Adventure", width / 2, height / 2 - scaleSize(150));
+  text("Inspired by Wind Rises", width / 2, height / 2 - scaleSize(150));
   
   // Username input instruction
   textSize(scaleSize(20));
   fill(139, 69, 19);
   stroke(255, 255, 240);
   strokeWeight(scaleSize(2));
-  text("Please enter your name", width / 2, height / 2 - scaleSize(80));
+  text("Please enter your name to start the game", width / 2, height / 2 - scaleSize(80));
   
   // Update and show input field
   updateNameInputPosition();
@@ -1008,7 +770,7 @@ function drawLandingPage() {
   fill(139, 69, 19);
   stroke(255, 255, 240);
   strokeWeight(scaleSize(1));
-  text("Press ENTER to continue", width / 2, height / 2 + scaleSize(150));
+  text("Press ENTER to continue", width / 2, height / 2 + scaleSize(200));
   
   // Show leaderboard if active
   if (showLeaderboard) {
@@ -1041,37 +803,56 @@ function drawInstructionsPage() {
   textAlign(CENTER, CENTER);
   textSize(scaleSize(40));
   textFont('serif');
-  text("How to Play", width / 2, height / 2 - scaleSize(200));
+  text("How to Play", width / 2, height * 0.15);
   
-  // Instructions
-  textSize(scaleSize(18));
+  // Instructions container - centered and better organized
+  textAlign(LEFT, TOP);
+  
+  // Goal Section
+  textSize(scaleSize(22));
   fill(139, 69, 19);
   stroke(255, 255, 240);
   strokeWeight(scaleSize(1));
-  textAlign(LEFT, CENTER);
+  let goalY = height * 0.25;
+  text("🎯 Goal", width / 2 - scaleSize(280), goalY);
   
+  textSize(scaleSize(18));
+  fill(139, 69, 19);
+  noStroke();
+  text("Collect as many stars as you can!", width / 2 - scaleSize(280), goalY + scaleSize(35));
+  
+  // How to Play Section
+  textSize(scaleSize(22));
+  fill(139, 69, 19);
+  stroke(255, 255, 240);
+  strokeWeight(scaleSize(1));
+  let playY = height * 0.40;
+  text("🕹️ How to Play", width / 2 - scaleSize(280), playY);
+  
+  // Instructions list
+  textSize(scaleSize(18));
+  fill(139, 69, 19);
+  noStroke();
   let instructions = [
-    "Use ↑/↓ arrow keys or W/S to move your airplane",
-    "Press SPACE for speed boost (consumes boost energy)",
-    "⭐ Collect stars to earn 10 points each",
-    "💣 Avoid bombs - they reduce your hearts",
-    "❤️ Collect heart items to restore health",
-    "New airplane skins unlock every 100 points",
-    "Visit the Airplane Collection to view and select skins"
+    "• Tilt your plane up or down to move it horizontally.",
+    "• Press the boost button to speed up!",
+    "• Avoid bombs: getting hit will cost you one heart.",
+    "• You start with 3 hearts, so be careful.",
+    "• Collect heart items to restore lost hearts."
   ];
   
-  let startY = height / 2 - scaleSize(120);
+  let instructionStartY = playY + scaleSize(40);
   for (let i = 0; i < instructions.length; i++) {
-    text(instructions[i], width / 2 - scaleSize(300), startY + i * scaleSize(35));
+    text(instructions[i], width / 2 - scaleSize(280), instructionStartY + i * scaleSize(32));
   }
   
-  // Continue button
+  // Continue button - moved further down to avoid overlap
   textAlign(CENTER, CENTER);
   textSize(scaleSize(24));
   fill(255, 215, 0);
   stroke(139, 69, 19);
   strokeWeight(scaleSize(3));
-  text("Press ENTER to Start Game", width / 2, height / 2 + scaleSize(200));
+  text("Press ENTER to Start Game", width / 2, height * 0.85);
   
   // Hide input and buttons
   if (nameInput) nameInput.hide();
@@ -1104,11 +885,11 @@ function drawStartScreen() {
   textAlign(CENTER, CENTER);
   textSize(scaleSize(56));
   textFont('serif');
-  text("Sky Collector", width / 2, height / 2 - scaleSize(150));
+  text("Tokyo Flight", width / 2, height / 2 - scaleSize(150));
   
   textSize(scaleSize(32));
   fill(255, 255, 240);
-  text("Flight Adventure", width / 2, height / 2 - scaleSize(100));
+  text("Inspired by Wind Rises", width / 2, height / 2 - scaleSize(100));
   
   // Username input instruction
   textSize(scaleSize(20));
@@ -1130,7 +911,7 @@ function drawStartScreen() {
   fill(139, 69, 19);
   stroke(255, 255, 240);
   strokeWeight(scaleSize(1));
-  text("Use ↑/↓ or W/S to move", width / 2, height / 2 + scaleSize(80));
+  text("Use ↑/↓ to move", width / 2, height / 2 + scaleSize(80));
   text("Press SPACE for speed boost", width / 2, height / 2 + scaleSize(110));
   text("⭐ Collect stars (+10 pts)", width / 2, height / 2 + scaleSize(140));
   text("💣 Avoid bombs (-1 heart)", width / 2, height / 2 + scaleSize(170));
@@ -1323,17 +1104,17 @@ function drawCollectionPage() {
   let totalRows = ceil(airplaneSkins.length / cols);
   
   // Calculate available space
-  let topMargin = height * 0.20; // Start below title/score info
+  let topMargin = height * 0.30; // Start below title/score info
   let bottomMargin = height * 0.25; // Space for instructions at bottom
   let availableHeight = height - topMargin - bottomMargin;
   let availableWidth = width * 0.95; // Use 95% of width
   
   // Calculate optimal skin size and spacing - ensure text fits
-  let maxSkinSize = min(availableWidth / cols * 0.75, availableHeight / totalRows * 0.65);
-  let skinSize = min(scaleSize(65), maxSkinSize);
+  let maxSkinSize = min(availableWidth / cols * 1.1, availableHeight / totalRows * 0.85);
+  let skinSize = min(scaleSize(90), maxSkinSize);
   // Increased spacing to accommodate text below boxes
-  let horizontalSpacing = skinSize * 1.5;
-  let verticalSpacing = skinSize * 1.8; // More vertical space for text
+  let horizontalSpacing = skinSize * 4;
+  let verticalSpacing = skinSize * 2.7; // More vertical space for text
   
   let startX = width / 2 - (cols - 1) * horizontalSpacing / 2;
   let startY = topMargin;
@@ -1402,11 +1183,7 @@ function drawCollectionPage() {
     textAlign(CENTER, CENTER);
     text(`Skin ${i + 1}`, 0, skinSize/2 + 20);
     
-    if (!isUnlocked) {
-      textSize(scaleSize(12));
-      fill(150, 150, 150);
-      text(`${unlockScore}pts`, 0, skinSize/2 + 38);
-    }
+    // Removed per request: point indications for locked skins
     
     pop();
   }
@@ -1417,7 +1194,7 @@ function drawCollectionPage() {
   fill(139, 69, 19);
   stroke(255, 255, 240);
   strokeWeight(scaleSize(1));
-  text("Press number keys (1-" + min(airplaneSkins.length, 9) + (airplaneSkins.length > 9 ? ", 0 for 10+" : "") + ") to select unlocked skin", width / 2, height * 0.88);
+  text("Press number keys (1-" + min(airplaneSkins.length, 9) + (airplaneSkins.length > 9 ? ", 0 for 10+" : "") + ") to select unlocked skin", width / 2, height * 0.8);
   
   // Show current selection
   if (currentSkin >= 0 && currentSkin < airplaneSkins.length) {
@@ -1425,14 +1202,14 @@ function drawCollectionPage() {
     fill(255, 215, 0);
     stroke(139, 69, 19);
     strokeWeight(scaleSize(1));
-    text(`Currently selected: Skin ${currentSkin + 1}`, width / 2, height * 0.92);
+    text(`Currently selected: Skin ${currentSkin + 1}`, width / 2, height * 0.88);
   }
   
   textSize(scaleSize(14));
   fill(139, 69, 19);
   stroke(255, 255, 240);
   strokeWeight(scaleSize(1));
-  text("Press ESC or B to go back", width / 2, height * 0.96);
+  text("Press ESC or B to go back", width / 2, height * 0.92);
 }
 
 // ------------------------------
@@ -1474,20 +1251,17 @@ function drawStoryPage() {
   strokeWeight(scaleSize(1));
   
   let storyText = [
-    "「風立ちぬ」は、宮崎駿監督による2013年のスタジオジブリの",
-    "アニメーション映画です。",
+    "“The Wind Rises” is a 2013 Studio Ghibli film directed by Hayao Miyazaki.",
+    "It follows the life of Jirō Horikoshi, the engineer who designed fighter",
+    "aircraft during the era of World War II.",
     "",
-    "この映画は、零式戦闘機の設計者である堀越二郎の人生を",
-    "描いた物語です。",
+    "Since childhood, Jirō has chased his dream of becoming an aviation engineer.",
+    "The film also portrays his romantic relationship with Nahoko, who suffers",
+    "from a serious illness.",
     "",
-    "主人公の二郎は、幼い頃から飛行機に憧れ、航空技術者として",
-    "夢を追い続けます。",
-    "",
-    "映画は、技術への情熱、戦争の現実、そして愛する人との",
-    "出会いと別れを描いています。",
-    "",
-    "「風立ちぬ、いざ生きめやも」という言葉は、",
-    "困難な時代でも前向きに生きることを意味しています。"
+    "Through Jirō’s journey, the movie beautifully depicts the harsh realities",
+    "of war, the pursuit of innovation, and the delicate, heartfelt connections",
+    "between people."
   ];
   
   let startY = height / 2 - scaleSize(150);
@@ -1529,7 +1303,6 @@ function drawLeaderboard() {
   let boxWidth = scaleSize(500);
   let boxHeight = scaleSize(400);
   fill(255, 250, 240);
-  stroke(139, 69, 19);
   strokeWeight(scaleSize(4));
   rect(width / 2 - boxWidth / 2, height / 2 - boxHeight / 2, boxWidth, boxHeight, scaleSize(20));
   
@@ -1624,7 +1397,8 @@ function playGame() {
   bombTimer--;
   if (bombTimer <= 0) {
     bombs.push(new Bomb());
-    bombTimer = random(80, 150) / difficulty;
+    // Increase bomb frequency by shortening the spawn interval
+    bombTimer = random(50, 110) / difficulty;
   }
 
   // Spawn hearts
@@ -1799,7 +1573,7 @@ function drawUI() {
     stroke(255, 250, 240);
     strokeWeight(scaleSize(1));
     text("Sensor: Not Connected", scaleSize(20), height - scaleSize(30));
-    text("Use ↑/↓ or W/S keys", scaleSize(20), height - scaleSize(15));
+    text("Use ↑/↓ keys", scaleSize(20), height - scaleSize(15));
   }
 }
 
@@ -1878,7 +1652,6 @@ function drawGameOverScreen() {
 
   fill(200, 50, 50);
   stroke(139, 69, 19);
-  strokeWeight(scaleSize(5));
   textAlign(CENTER, CENTER);
   textSize(scaleSize(64));
   textFont('serif');
@@ -1891,19 +1664,17 @@ function drawGameOverScreen() {
   if (playerName) {
     textSize(scaleSize(24));
     fill(139, 69, 19);
-    text(`Great job, ${playerName}!`, width / 2, height / 2 + scaleSize(20));
+    text(`You are a nice aviator, ${playerName}!`, width / 2, height / 2 + scaleSize(20));
   }
 
   textSize(scaleSize(24));
   fill(255, 215, 0);
   stroke(139, 69, 19);
-  strokeWeight(scaleSize(3));
   text("Press ENTER to Restart", width / 2, height / 2 + scaleSize(100));
   
   textSize(scaleSize(18));
   fill(139, 69, 19);
   stroke(255, 250, 240);
-  strokeWeight(scaleSize(1));
   text("Press L to view Leaderboard", width / 2, height / 2 + scaleSize(140));
   
   // Show leaderboard

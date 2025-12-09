@@ -60,6 +60,6 @@ void loop() {
     ledOnTime = 0;  // Reset timer
   }
 
-  delay(20);  // ~50Hz data rate
+  delay(100);  // ~50Hz data rate
 }
 
