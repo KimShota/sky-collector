@@ -8,12 +8,14 @@ html, body {
   height: 100%;
 }
 
+/* make the canvas responsive */
 canvas {
   display: block;
   width: 100vw !important;
   height: 100vh !important;
 }
 
+/* make the main container responsive */
 main {
   width: 100vw;
   height: 100vh;
