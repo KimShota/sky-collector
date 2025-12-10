@@ -5,7 +5,7 @@ class Plane {
     this.y = height / 2;
     this.size = 120;
     // set the speed of the plane
-    this.speed = 5;
+    this.speed = 12;
     // skin to use 
     this.skin = 0;
   }

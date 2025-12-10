@@ -7,11 +7,11 @@ let hearts = 3; // set the number of hearts to 3
 let starTimer = 0;
 let bombTimer = 0;
 let boostEnergy = 100; // boost energy to boost the plane up
-let boostRecoveryRate = 0.15;
-let boostDrainRate = 1.5;
-let difficulty = 1;
+let boostRecoveryRate = 0.15; // rate at which the boost energy recovers
+let boostDrainRate = 1.5; // rate at which the boost energy drains
+let difficulty = 1; // difficulty level of the game
 let difficultyTimer = 0;
-let hearts_items = [];
+let hearts_items = []; // array to store the heart items
 let heartSpawnTimer = 0;
 let playerName = "";
 let currentSkin = 0;
@@ -20,13 +20,10 @@ let nameInput;
 let leaderboard = [];
 let showLeaderboard = false;
 let buttonPressed = false;
-let selectedMode = "";
 let collectionButton, storyButton;
 let leaderboardButton;
-let lastUnlockedSkinCount = 1;
 let unlockAnimation = null;
-let newlyUnlockedSkins = [];
-let skinChangeAllowed = false;
+let newlyUnlockedSkins = []; // array to store the newly unlocked skins
 let highestScore = 0;
 
 // variables for serial communication
@@ -42,10 +39,8 @@ const BASE_HEIGHT = 600;
 
 // variables for sprites 
 let spritesheet;
-let sprites = [];
-let airplaneSkins = []; // array to store airplane skins
+let airplaneSkins = [];
 let unlockedSkins = [0];
-let showSkinSelection = false;
 
 // variables for background music
 let bgMusicMenu;
@@ -72,8 +67,6 @@ function updateControls() {
   
   // if the sensor is connected and the port is open
   if (useSensor && port && port.opened()) {
-    // center the sensor value to 337.5
-    let sensorCenter = 337.5;
     // map the sensor value from the accelerometer to the plane's y position 
     let targetY = map(sensorValue, 285, 380, plane.size / 2, height - plane.size / 2);
     // store the current y position of the plane
@@ -99,31 +92,21 @@ function updateControls() {
   return { moveUp, moveDown, boosting };
 }
 
-// ------------------------------
-// Responsive Scaling Functions
-// ------------------------------
+// function to make the screen responsive
 function getScale() {
   return min(width / BASE_WIDTH, height / BASE_HEIGHT);
 }
 
+// function to scale the size accordingly
 function scaleSize(size) {
   return size * getScale();
 }
 
-function scaleX(x) {
-  return x * (width / BASE_WIDTH);
-}
-
-function scaleY(y) {
-  return y * (height / BASE_HEIGHT);
-}
-
-// ------------------------------
-// Button Position Update
-// ------------------------------
+// function to update the button position so that they are in the right position on the screen regardless of screen size
 function updateButtonPositions() {
   if (!collectionButton || !storyButton) return;
   
+  // get the canvas element to align the button with the canvas 
   let canvas = document.querySelector('canvas');
   let centerX, centerY;
   if (canvas) {
@@ -131,14 +114,16 @@ function updateButtonPositions() {
     centerX = rect.left + rect.width / 2;
     centerY = rect.top + rect.height / 2;
   } else {
-    // Fallback to window center
+    // if the canvas is not found, then use the window width and height to center the button
     centerX = windowWidth / 2;
     centerY = windowHeight / 2;
   }
   
+  // scale the button size accordingly 
   let buttonWidth = scaleSize(200);
   let buttonSpacing = scaleSize(20);
   
+  // set the size and position of the buttons accordingly
   collectionButton.size(buttonWidth, scaleSize(50));
   collectionButton.position(centerX - buttonWidth - buttonSpacing / 2, centerY + scaleSize(20));
   storyButton.size(buttonWidth, scaleSize(50));
@@ -148,14 +133,16 @@ function updateButtonPositions() {
 function updateLeaderboardButtonPosition() {
   if (!leaderboardButton) return;
   
+  // get the canvas element
   let canvas = document.querySelector('canvas');
   let centerX, centerY;
   if (canvas) {
+    // if the canvas is found, then 
     let rect = canvas.getBoundingClientRect();
     centerX = rect.left + rect.width / 2;
     centerY = rect.top + rect.height / 2;
   } else {
-    // Fallback to window center
+
     centerX = windowWidth / 2;
     centerY = windowHeight / 2;
   }
@@ -199,9 +186,7 @@ function updateLandingPageButtonPositions() {
   }
 }
 
-// ------------------------------
-// Name Input Position Update
-// ------------------------------
+// function to update the name input button position according to the window size
 function updateNameInputPosition() {
   if (nameInput) {
     let canvas = document.querySelector('canvas');
@@ -223,142 +208,148 @@ function updateNameInputPosition() {
   }
 }
 
-// ------------------------------
-// Skin Unlock Functions
-// ------------------------------
+// function to unlock skins
 function loadUnlockedSkins() {
-  // Load highest score
+  // get the highest score 
   let savedScore = localStorage.getItem('skyCollectorHighestScore');
+  // if there are scores saved, then we parse it into integer and get the score
   if (savedScore !== null) {
     highestScore = parseInt(savedScore);
   } else {
     highestScore = 0;
   }
-  
-  // Calculate unlocked skins based on highest score
-  unlockedSkins = [0]; // First skin is always unlocked
-  let skinsToUnlock = floor(highestScore / 100) + 1; // +1 because skin 0 is always unlocked
+
+  // the first skin is always unlocked
+  unlockedSkins = [0];
+  // unlock the skin every 100 score
+  let skinsToUnlock = floor(highestScore / 100) + 1;
   let maxSkins = airplaneSkins.length;
   
+  // push the unlocked skins into the array
   for (let i = 1; i < min(skinsToUnlock, maxSkins); i++) {
     unlockedSkins.push(i);
   }
   
-  // Load selected skin
+  // get the saved skin from the local storage where we store the skins
   let savedSkin = localStorage.getItem('skyCollectorCurrentSkin');
   if (savedSkin !== null) {
+    // get the index
     let skinIndex = parseInt(savedSkin);
     if (skinIndex >= 0 && skinIndex < airplaneSkins.length && unlockedSkins.includes(skinIndex)) {
       currentSkin = skinIndex;
+      // set the skin to the selected one
       plane.setSkin(currentSkin);
     }
   }
 }
 
+// function to save unlocked skins into the local storage 
 function saveUnlockedSkins() {
   localStorage.setItem('skyCollectorUnlockedSkins', JSON.stringify(unlockedSkins));
 }
 
+// function to unlock skins
 function checkAndUnlockSkins(score) {
-  // Unlock one skin every 100 points
-  let skinsToUnlock = floor(score / 100) + 1; // +1 because skin 0 is always unlocked
+  // unlock the skins every 100 score, starting from the first skin
+  let skinsToUnlock = floor(score / 100) + 1;
   let maxSkins = airplaneSkins.length;
   
   let previousUnlockedCount = unlockedSkins.length;
   
+  // check if the skin is already unlocked or not
   for (let i = 0; i < min(skinsToUnlock, maxSkins); i++) {
     if (!unlockedSkins.includes(i)) {
       unlockedSkins.push(i);
       newlyUnlockedSkins.push(i);
       
-      // Trigger unlock animation
+      // trigger the unlocking animation 
       if (!unlockAnimation) {
         unlockAnimation = {
           active: true,
           skinIndex: i,
           timer: 0,
-          duration: 180, // 3 seconds at 60fps
+          duration: 120,
           scale: 0,
-          rotation: 0,
-          alpha: 255
+          rotation: 0
         };
       }
     }
   }
   
-  // Sort and save
+  // sort the skins and save them
   unlockedSkins.sort((a, b) => a - b);
   saveUnlockedSkins();
-  
-  // Update last unlocked count
-  if (unlockedSkins.length > previousUnlockedCount) {
-    lastUnlockedSkinCount = unlockedSkins.length;
-  }
 }
 
-// ------------------------------
-// Leaderboard Functions
-// ------------------------------
+// functions to manage the leaderboard 
 function loadLeaderboard() {
+  // get the leaderboard from the local storage
   let saved = localStorage.getItem('skyCollectorLeaderboard');
   if (saved) {
+    // parse the leaderboard
     leaderboard = JSON.parse(saved);
   } else {
+    // if there is no leaderboard, then create a new one
     leaderboard = [];
   }
-  // Sort by score
+  // sort the leaderboard by score
   leaderboard.sort((a, b) => b.score - a.score);
 }
 
+// function to save the score to the leaderboard 
 function saveToLeaderboard(name, score) {
+  // if the name is not provided, then set the name to who is this
   if (!name || name.trim() === "") {
-    name = "Anonymous";
+    name = "who is this";
   }
+  // push the score to the leaderboard
   leaderboard.push({ name: name.trim(), score: score, date: new Date().toLocaleDateString() });
   leaderboard.sort((a, b) => b.score - a.score);
-  // Keep only top 10
+
+  // keep only the top 10 scores
   if (leaderboard.length > 10) {
     leaderboard = leaderboard.slice(0, 10);
   }
   localStorage.setItem('skyCollectorLeaderboard', JSON.stringify(leaderboard));
   
-  // Update highest score
+  // update the highest score 
   if (score > highestScore) {
     highestScore = score;
     localStorage.setItem('skyCollectorHighestScore', highestScore.toString());
-    // Recalculate unlocked skins based on new highest score
+    // recalculate the unlocked skins 
     loadUnlockedSkins();
   }
 }
 
-// ------------------------------
-// Background Music Management
-// ------------------------------
+// function to handle the background music 
 function handleBackgroundMusic() {
-  // Check if game state changed
+  // if the game state changed to the playing mode 
   if (gameState !== previousGameState) {
     if (gameState === "PLAYING") {
-      // Switch to playing music
+      // switch to the playing music 
       switchToPlayingMusic();
     } else {
-      // Switch to menu music
+      // else always play the default music 
       switchToMenuMusic();
     }
     previousGameState = gameState;
   }
   
-  // Handle fade transitions
+  // if the music is fading out
   if (isFadingOut) {
+    // if the game is in playing mode 
     if (gameState === "PLAYING") {
-      // Fade out menu music
+      // if the menu music is playing
       if (bgMusicMenu.isPlaying()) {
+        // get the current volume of the menu music 
         let currentVol = bgMusicMenu.getVolume();
+        // calculate the new volume
         let newVol = max(0, currentVol - fadeSpeed);
         bgMusicMenu.setVolume(newVol);
         if (newVol <= 0) {
           bgMusicMenu.stop();
           isFadingOut = false;
-          // Start playing music
+          // if the playing music is not playing, then start playing it
           if (!bgMusicPlaying.isPlaying()) {
             bgMusicPlaying.setVolume(0);
             bgMusicPlaying.loop();
@@ -369,15 +360,17 @@ function handleBackgroundMusic() {
         isFadingOut = false;
       }
     } else {
-      // Fade out playing music
+      // if the backgroud music is playing
       if (bgMusicPlaying.isPlaying()) {
+        // get the current volume of the playing music 
         let currentVol = bgMusicPlaying.getVolume();
         let newVol = max(0, currentVol - fadeSpeed);
+        // set the new volume
         bgMusicPlaying.setVolume(newVol);
         if (newVol <= 0) {
           bgMusicPlaying.stop();
           isFadingOut = false;
-          // Start menu music
+          // if the menu music is not playing, then start playing it
           if (!bgMusicMenu.isPlaying()) {
             bgMusicMenu.setVolume(0);
             bgMusicMenu.loop();
@@ -390,18 +383,20 @@ function handleBackgroundMusic() {
     }
   }
   
-  // Handle fade in
+  // if the music is fading in
   if (isFadingIn) {
     if (gameState === "PLAYING") {
       if (bgMusicPlaying.isPlaying()) {
         let currentVol = bgMusicPlaying.getVolume();
         let newVol = min(targetVolume, currentVol + fadeSpeed);
+        // set the new volume
         bgMusicPlaying.setVolume(newVol);
         if (newVol >= targetVolume) {
           isFadingIn = false;
         }
       }
     } else {
+      // if the game is not in playing mode, then fade in the menu music
       if (bgMusicMenu.isPlaying()) {
         let currentVol = bgMusicMenu.getVolume();
         let newVol = min(targetVolume, currentVol + fadeSpeed);
@@ -414,12 +409,13 @@ function handleBackgroundMusic() {
   }
 }
 
+// function to switch to the playing music
 function switchToPlayingMusic() {
-  // Stop menu music with fade out
+  // if the menu music is playing, then fade it out
   if (bgMusicMenu.isPlaying()) {
     isFadingOut = true;
   } else {
-    // If menu music wasn't playing, start playing music directly
+    // if the playing music is not playing, then start playing it
     if (!bgMusicPlaying.isPlaying()) {
       bgMusicPlaying.setVolume(0);
       bgMusicPlaying.loop();
@@ -428,12 +424,13 @@ function switchToPlayingMusic() {
   }
 }
 
+// function to switch to the menu music
 function switchToMenuMusic() {
-  // Stop playing music with fade out
+  // if the playing music is playing, then fade it out
   if (bgMusicPlaying.isPlaying()) {
     isFadingOut = true;
   } else {
-    // If playing music wasn't playing, start menu music directly
+    // if the menu music is not playing, then start playing it
     if (!bgMusicMenu.isPlaying()) {
       bgMusicMenu.setVolume(0);
       bgMusicMenu.loop();
@@ -442,74 +439,60 @@ function switchToMenuMusic() {
   }
 }
 
-// ------------------------------
-// p5 Setup
-// ------------------------------
+// main function
 function setup() {
   createCanvas(windowWidth, windowHeight);
   plane = new Plane();
 
+  // get the width and height of the spritesheet
+  let imageWidth = spritesheet.width;
+  let imageHeight = spritesheet.height;
   
-  // Analyze the new planes.png structure (500x500 image)
-  // Assuming a grid layout - adjust these values based on actual image structure
-  let imgWidth = spritesheet.width;
-  let imgHeight = spritesheet.height;
-  
-  // Detect grid structure - try common layouts
-  // For a 500x500 image, common layouts could be:
-  // - 5 columns x 6 rows = 30 planes (100x83 per cell)
-  // - 6 columns x 5 rows = 30 planes (83x100 per cell)
-  // - 10 columns x 3 rows = 30 planes (50x166 per cell)
-  
-  // Try to auto-detect: assume 5 columns x 6 rows for 30 planes
+  // get the number of images in row and col
   let cols = 5;
   let rows = 6;
-  let cellWidth = imgWidth / cols;
-  let cellHeight = imgHeight / rows;
+  let cellWidth = imageWidth / cols;
+  let cellHeight = imageHeight / rows;
   
-  // Add some padding/margin if planes don't fill entire cells
-  let padding = 5; // Adjust based on actual spacing in image
+  // some padding between the images
+  let padding = 5;
   
   airplaneSkins = [];
   
-  // Extract each plane from the grid
+  // use the template from the class slides 
+  // extract each plane from the spritesheet
   for (let row = 0; row < rows; row++) {
     for (let col = 0; col < cols; col++) {
+      // get the position and the size of each image 
       let x = col * cellWidth + padding;
       let y = row * cellHeight + padding;
       let w = cellWidth - (padding * 2);
       let h = cellHeight - (padding * 2);
       
-      // Ensure we don't go outside image bounds
-      x = max(0, min(x, imgWidth - w));
-      y = max(0, min(y, imgHeight - h));
-      w = min(w, imgWidth - x);
-      h = min(h, imgHeight - y);
+      // ensure we don't go outside the image bounds
+      x = max(0, min(x, imageWidth - w));
+      y = max(0, min(y, imageHeight - h));
+      w = min(w, imageWidth - x);
+      h = min(h, imageHeight - y);
       
+      // extract the image if it is not empty
       if (w > 0 && h > 0) {
         let img = spritesheet.get(x, y, w, h);
         airplaneSkins.push(img);
       }
     }
   }
-  
-  // If we got fewer planes than expected, log for debugging
-  if (airplaneSkins.length < 30) {
-    console.log(`Extracted ${airplaneSkins.length} planes from ${imgWidth}x${imgHeight} image`);
-  }
 
-  
-  
-  // Load unlocked skins from localStorage
+  // load the unlocked skins from the local storage
   loadUnlockedSkins();
   
-  // Create username input field
+  // create the username input field
   nameInput = createInput('');
   nameInput.size(scaleSize(300));
   nameInput.style('font-size', scaleSize(20) + 'px');
   nameInput.style('text-align', 'center');
   nameInput.style('padding', scaleSize(10) + 'px');
-  nameInput.style('border', scaleSize(3) + 'px solid #8B4513');
+  nameInput.style('border', scaleSize(3) + 'px solid brown');
   nameInput.style('border-radius', scaleSize(10) + 'px');
   nameInput.style('background-color', '#FFF8DC');
   nameInput.style('font-family', 'serif');
@@ -517,70 +500,69 @@ function setup() {
   updateNameInputPosition();
   nameInput.show();
   
-  // Create mode selection buttons
+  // create the collection button
   collectionButton = createButton('Plane Collection');
   collectionButton.size(scaleSize(200), scaleSize(50));
   collectionButton.style('font-size', scaleSize(18) + 'px');
   collectionButton.style('padding', scaleSize(10) + 'px');
-  collectionButton.style('border', scaleSize(3) + 'px solid #8B4513');
+  collectionButton.style('border', scaleSize(3) + 'px solid brown');
   collectionButton.style('border-radius', scaleSize(10) + 'px');
   collectionButton.style('background-color', '#FFF8DC');
   collectionButton.style('font-family', 'serif');
   collectionButton.style('cursor', 'pointer');
   collectionButton.style('z-index', '1000');
+  // when the collection button is pressed, hide all other buttons and show the collection page
   collectionButton.mousePressed(function() {
-    selectedMode = "collection";
     gameState = "COLLECTION_PAGE";
     nameInput.hide();
     collectionButton.hide();
     if (storyButton) storyButton.hide();
     if (leaderboardButton) leaderboardButton.hide();
-    console.log("Collection mode selected:", selectedMode);
   });
   collectionButton.hide();
   
+  // create the story button
   storyButton = createButton('Wind Rises Story');
   storyButton.size(scaleSize(200), scaleSize(50));
   storyButton.style('font-size', scaleSize(18) + 'px');
   storyButton.style('padding', scaleSize(10) + 'px');
-  storyButton.style('border', scaleSize(3) + 'px solid #8B4513');
+  storyButton.style('border', scaleSize(3) + 'px solid brown');
   storyButton.style('border-radius', scaleSize(10) + 'px');
   storyButton.style('background-color', '#FFF8DC');
   storyButton.style('font-family', 'serif');
   storyButton.style('cursor', 'pointer');
   storyButton.style('z-index', '1000');
+  // when the story button is pressed, hide all other buttons and show the story page
   storyButton.mousePressed(function() {
-    selectedMode = "story";
     gameState = "STORY_PAGE";
     nameInput.hide();
     if (collectionButton) collectionButton.hide();
     storyButton.hide();
-    console.log("Story mode selected:", selectedMode);
   });
   storyButton.hide();
   
-  // Create leaderboard button
+  // create the leaderboard button
   leaderboardButton = createButton('Leaderboard');
   leaderboardButton.size(scaleSize(200), scaleSize(50));
   leaderboardButton.style('font-size', scaleSize(18) + 'px');
   leaderboardButton.style('padding', scaleSize(10) + 'px');
-  leaderboardButton.style('border', scaleSize(3) + 'px solid #8B4513');
+  leaderboardButton.style('border', scaleSize(3) + 'px solid brown');
   leaderboardButton.style('border-radius', scaleSize(10) + 'px');
   leaderboardButton.style('background-color', '#FFF8DC');
   leaderboardButton.style('font-family', 'serif');
   leaderboardButton.style('cursor', 'pointer');
   leaderboardButton.style('z-index', '1000');
+  // when the leaderboard button is pressed, show the leaderboard
   leaderboardButton.mousePressed(function() {
     showLeaderboard = !showLeaderboard;
-    console.log("Leaderboard toggled:", showLeaderboard);
   });
   leaderboardButton.hide();
   
-  // Initialize serial communication
+  // create the serial communication
   port = createSerial(); 
   
   
-  // Try to open previously used port
+  // try opening previously used port
   let usedPorts = usedSerialPorts();
   if (usedPorts.length > 0) {
     port.open(usedPorts[0], baudrate);
@@ -599,15 +581,15 @@ function setup() {
   connectButton.style('border-radius', scaleSize(5) + 'px');
   connectButton.style('cursor', 'pointer');
   
-  // Load leaderboard
+  // load the leaderboard
   loadLeaderboard();
   
-  // Initialize clouds
+  // create 5 clouds at the beginning
   for (let i = 0; i < 5; i++) {
     clouds.push(new Cloud());
   }
   
-  // Initialize background music
+  // initialize the background music
   previousGameState = gameState;
   if (bgMusicMenu && !bgMusicMenu.isPlaying()) {
     bgMusicMenu.setVolume(targetVolume);
@@ -615,15 +597,14 @@ function setup() {
   }
 }
 
-// ------------------------------
-// Serial Communication
-// ------------------------------
+// function to connect to the serial port
 function connectSerial() {
   if (!port.opened()) {
-    // Open port selection popup
+    // open the port
     port.open(baudrate);
     useSensor = true;
   } else {
+    // close the port
     port.close();
     useSensor = false;
   }
@@ -635,34 +616,31 @@ function readSerialValue() {
   if (str.length > 0) {
     str = str.trim();
 
-    // Expecting "ACC:300,BTN:1"
+    // expect the string to be in the format of "ACC:400,BTN:0"
     let parts = str.split(",");
 
+    // if the string is in the right format
     if (parts.length === 2) {
-      let accVal = parseInt(parts[0].split(":")[1]);
-      let btnVal = parseInt(parts[1].split(":")[1]);
+      // get the accelerometer value
+      let accelerometerValue = parseInt(parts[0].split(":")[1]);
+      // get the button value
+      let buttonValue = parseInt(parts[1].split(":")[1]);
 
-      if (!isNaN(accVal)) sensorValue = accVal;
-      if (!isNaN(btnVal)) buttonPressed = (btnVal === 1);
+      if (!isNaN(accelerometerValue)) sensorValue = accelerometerValue;
+      if (!isNaN(buttonValue)) buttonPressed = (buttonValue === 1);
       
       useSensor = true;
     }
   }
 }
 
-
-
-
-
-// ------------------------------
-// p5 Draw
-// ------------------------------
 function draw() {
-  // Read serial data FIRST, before any game logic uses it
+  // read the serial value
   if (port && port.opened()) {
     readSerialValue();
   }
 
+  // check if the port is open or not
   if (port.opened()) {
     console.log("port is open");
   } else {
@@ -671,10 +649,10 @@ function draw() {
 
   console.log("sensorValue =", sensorValue);
 
-  // Handle background music
+  // handle the background music
   handleBackgroundMusic();
   
-  // Update connect button label based on connection status
+  // update the connect button based on the connection status
   if (connectButton) {
     if (!port || !port.opened()) {
       connectButton.html("Connect Serial");
@@ -685,12 +663,11 @@ function draw() {
     }
   }
   
+  // draw the game state
   if (gameState === "LANDING") {
     drawLandingPage();
   } else if (gameState === "INSTRUCTIONS") {
     drawInstructionsPage();
-  } else if (gameState === "START") {
-    drawStartScreen();
   } else if (gameState === "PLAYING") {
     playGame();
   } else if (gameState === "GAMEOVER") {
@@ -701,15 +678,16 @@ function draw() {
     drawStoryPage(); 
   }
   
-  // Check and unlock skins based on score (every 100 points)
+  // check and unlock skins based on the score (every 100 points)
   checkAndUnlockSkins(score);
   
-  // Update unlock animation
+  // update the unlock animation
   if (unlockAnimation && unlockAnimation.active) {
     unlockAnimation.timer++;
     unlockAnimation.scale = sin(unlockAnimation.timer * 0.1) * 0.3 + 1.0;
     unlockAnimation.rotation += 0.05;
     
+    // if the timer is greater than the duration, then deactivate the animation
     if (unlockAnimation.timer >= unlockAnimation.duration) {
       unlockAnimation.active = false;
       unlockAnimation = null;
@@ -718,11 +696,9 @@ function draw() {
 
 }
 
-// ------------------------------
-// Landing Page
-// ------------------------------
+// function to draw the landing page
 function drawLandingPage() {
-  // Ghibli-style background (gradient)
+  // draw a gradient background (ghibli-style)
   for (let i = 0; i < height; i++) {
     let inter = map(i, 0, height, 0, 1);
     let c = lerpColor(color(135, 206, 250), color(255, 250, 240), inter);
@@ -730,13 +706,13 @@ function drawLandingPage() {
     line(0, i, width, i);
   }
   
-  // Draw clouds
+  // draw the clouds
   for (let cloud of clouds) {
     cloud.update();
     cloud.draw();
   }
   
-  // Title
+  // draw the title
   fill(255, 255, 240);
   stroke(139, 69, 19);
   strokeWeight(scaleSize(5));
@@ -749,41 +725,39 @@ function drawLandingPage() {
   fill(255, 255, 240);
   text("Inspired by Wind Rises", width / 2, height / 2 - scaleSize(150));
   
-  // Username input instruction
+  // draw the username input instruction
   textSize(scaleSize(20));
   fill(139, 69, 19);
   stroke(255, 255, 240);
   strokeWeight(scaleSize(2));
   text("Please enter your name to start the game", width / 2, height / 2 - scaleSize(80));
   
-  // Update and show input field
+  // update and show the input field
   updateNameInputPosition();
   nameInput.show();
   
-  // Show all buttons on landing page
+  // show all buttons on the landing page
   updateLandingPageButtonPositions();
   if (collectionButton) collectionButton.show();
   if (storyButton) storyButton.show();
   if (leaderboardButton) leaderboardButton.show();
   
-  // Instructions
+  // draw the instructions
   textSize(scaleSize(18));
   fill(139, 69, 19);
   stroke(255, 255, 240);
   strokeWeight(scaleSize(1));
-  text("Press ENTER to continue", width / 2, height / 2 + scaleSize(200));
+  text("Press enter to continue", width / 2, height / 2 + scaleSize(200));
   
-  // Show leaderboard if active
+  // show the leaderboard if active
   if (showLeaderboard) {
     drawLeaderboard();
   }
 }
 
-// ------------------------------
-// Instructions Page
-// ------------------------------
+// function to draw the instructions page
 function drawInstructionsPage() {
-  // Ghibli-style background (gradient)
+  // draw a gradient background (ghibli-style)
   for (let i = 0; i < height; i++) {
     let inter = map(i, 0, height, 0, 1);
     let c = lerpColor(color(135, 206, 250), color(255, 250, 240), inter);
@@ -791,13 +765,13 @@ function drawInstructionsPage() {
     line(0, i, width, i);
   }
   
-  // Draw clouds
+  // draw the clouds
   for (let cloud of clouds) {
     cloud.update();
     cloud.draw();
   }
   
-  // Title
+  // draw the title
   fill(255, 255, 240);
   stroke(139, 69, 19);
   strokeWeight(scaleSize(4));
@@ -806,48 +780,50 @@ function drawInstructionsPage() {
   textFont('serif');
   text("How to Play", width / 2, height * 0.15);
   
-  // Instructions container - centered and better organized
+  // draw the instructions container
   textAlign(LEFT, TOP);
   
-  // Goal Section
+  // draw the goal section
   textSize(scaleSize(22));
   fill(139, 69, 19);
   stroke(255, 255, 240);
   strokeWeight(scaleSize(1));
   let goalY = height * 0.25;
-  text("🎯 Goal", width / 2 - scaleSize(280), goalY);
+  text("🏆 Goal", width / 2 - scaleSize(280), goalY);
   
   textSize(scaleSize(18));
   fill(139, 69, 19);
   noStroke();
-  text("Collect as many stars as you can!", width / 2 - scaleSize(280), goalY + scaleSize(35));
+  text("Collect as many stars as you can!!!", width / 2 - scaleSize(280), goalY + scaleSize(35));
   
-  // How to Play Section
+  // draw the how to play section
   textSize(scaleSize(22));
   fill(139, 69, 19);
   stroke(255, 255, 240);
   strokeWeight(scaleSize(1));
   let playY = height * 0.40;
-  text("🕹️ How to Play", width / 2 - scaleSize(280), playY);
+  text("🎮 How to Play", width / 2 - scaleSize(280), playY);
   
-  // Instructions list
+  // draw the instructions list
   textSize(scaleSize(18));
   fill(139, 69, 19);
   noStroke();
   let instructions = [
-    "• Tilt your plane up or down to move it horizontally.",
+    "• Tilt your plane up or down to move it vertically on the screen.",
     "• Press the boost button to speed up!",
-    "• Avoid bombs: getting hit will cost you one heart.",
-    "• You start with 3 hearts, so be careful.",
-    "• Collect heart items to restore lost hearts."
+    "• Avoid bombs as much as possible since getting hit will cost you one heart.",
+    "• You start with 3 hearts",
+    "• Collect heart items to restore your hearts.",
+    "• Finally and most importantly, enjoy your experienced as an aviation engineer!"
   ];
   
+  // draw the instructions list
   let instructionStartY = playY + scaleSize(40);
   for (let i = 0; i < instructions.length; i++) {
     text(instructions[i], width / 2 - scaleSize(280), instructionStartY + i * scaleSize(32));
   }
   
-  // Continue button - moved further down to avoid overlap
+  // draw the continue button
   textAlign(CENTER, CENTER);
   textSize(scaleSize(24));
   fill(255, 215, 0);
@@ -855,221 +831,15 @@ function drawInstructionsPage() {
   strokeWeight(scaleSize(3));
   text("Press ENTER to Start Game", width / 2, height * 0.85);
   
-  // Hide input and buttons
+  // hide the input and buttons
   if (nameInput) nameInput.hide();
   if (collectionButton) collectionButton.hide();
   if (storyButton) storyButton.hide();
 }
 
-// ------------------------------
-// Start Screen
-// ------------------------------
-function drawStartScreen() {
-  // Ghibli-style background (gradient)
-  for (let i = 0; i < height; i++) {
-    let inter = map(i, 0, height, 0, 1);
-    let c = lerpColor(color(135, 206, 250), color(255, 250, 240), inter);
-    stroke(c);
-    line(0, i, width, i);
-  }
-  
-  // Draw clouds
-  for (let cloud of clouds) {
-    cloud.update();
-    cloud.draw();
-  }
-  
-  // Title
-  fill(255, 255, 240);
-  stroke(139, 69, 19);
-  strokeWeight(scaleSize(5));
-  textAlign(CENTER, CENTER);
-  textSize(scaleSize(56));
-  textFont('serif');
-  text("Tokyo Flight", width / 2, height / 2 - scaleSize(150));
-  
-  textSize(scaleSize(32));
-  fill(255, 255, 240);
-  text("Inspired by Wind Rises", width / 2, height / 2 - scaleSize(100));
-  
-  // Username input instruction
-  textSize(scaleSize(20));
-  fill(139, 69, 19);
-  stroke(255, 255, 240);
-  strokeWeight(scaleSize(2));
-  text("Please enter your name", width / 2, height / 2 - scaleSize(30));
-  
-  // Update and show input field (hide if leaderboard is showing)
-  updateNameInputPosition();
-  if (showLeaderboard) {
-    nameInput.hide();
-  } else {
-    nameInput.show();
-  }
-  
-  // Instructions
-  textSize(scaleSize(18));
-  fill(139, 69, 19);
-  stroke(255, 255, 240);
-  strokeWeight(scaleSize(1));
-  text("Use ↑/↓ to move", width / 2, height / 2 + scaleSize(80));
-  text("Press SPACE for speed boost", width / 2, height / 2 + scaleSize(110));
-  text("⭐ Collect stars (+10 pts)", width / 2, height / 2 + scaleSize(140));
-  text("💣 Avoid bombs (-1 heart)", width / 2, height / 2 + scaleSize(170));
-  text("New skins unlock every 100 points!", width / 2, height / 2 + scaleSize(200));
-  
-  // Skin selection button
-  textSize(scaleSize(18));
-  fill(139, 69, 19);
-  stroke(255, 255, 240);
-  strokeWeight(scaleSize(1));
-  text("Press S to select skin", width / 2, height / 2 + scaleSize(230));
-  
-  // Start button
-  textSize(scaleSize(24));
-  fill(255, 215, 0);
-  stroke(139, 69, 19);
-  strokeWeight(scaleSize(3));
-  text("Press ENTER to Start", width / 2, height / 2 + scaleSize(270));
-  
-  // Leaderboard button
-  textSize(scaleSize(18));
-  fill(139, 69, 19);
-  stroke(255, 255, 240);
-  strokeWeight(scaleSize(1));
-  text("Press L to view Leaderboard", width / 2, height / 2 + scaleSize(310));
-  
-  // Draw skin selection UI if active
-  if (showSkinSelection) {
-    drawSkinSelection();
-  }
-  
-  // Show leaderboard
-  if (showLeaderboard) {
-    drawLeaderboard();
-  }
-}
-
-// ------------------------------
-// Skin Selection Display
-// ------------------------------
-function drawSkinSelection() {
-  // Background overlay
-  fill(0, 0, 0, 150);
-  noStroke();
-  rect(0, 0, width, height);
-  
-  // Skin selection box
-  let boxWidth = scaleSize(600);
-  let boxHeight = scaleSize(500);
-  fill(255, 250, 240);
-  stroke(139, 69, 19);
-  strokeWeight(scaleSize(4));
-  rect(width / 2 - boxWidth / 2, height / 2 - boxHeight / 2, boxWidth, boxHeight, scaleSize(20));
-  
-  // Title
-  fill(139, 69, 19);
-  textAlign(CENTER, CENTER);
-  textSize(scaleSize(32));
-  text("✈️ Select Airplane Skin ✈️", width / 2, height / 2 - scaleSize(220));
-  
-  // Display skins in a grid
-  let cols = 4;
-  let skinSize = scaleSize(80);
-  let spacing = scaleSize(100);
-  let startX = width / 2 - (cols - 1) * spacing / 2;
-  let startY = height / 2 - scaleSize(100);
-  
-  for (let i = 0; i < airplaneSkins.length; i++) {
-    let col = i % cols;
-    let row = floor(i / cols);
-    let x = startX + col * spacing;
-    let y = startY + row * spacing;
-    
-    let isUnlocked = unlockedSkins.includes(i);
-    let isSelected = currentSkin === i;
-    let isNewlyUnlocked = newlyUnlockedSkins.includes(i);
-    
-    // Draw skin preview
-    push();
-    translate(x, y);
-    
-    // Background box
-    if (isSelected) {
-      fill(255, 215, 0);
-      stroke(139, 69, 19);
-      strokeWeight(scaleSize(3));
-    } else if (isNewlyUnlocked) {
-      // Highlight newly unlocked skins
-      fill(255, 200, 100);
-      stroke(255, 150, 0);
-      strokeWeight(scaleSize(3));
-    } else if (isUnlocked) {
-      fill(255, 255, 255);
-      stroke(139, 69, 19);
-      strokeWeight(scaleSize(2));
-    } else {
-      fill(100, 100, 100);
-      stroke(50, 50, 50);
-      strokeWeight(scaleSize(2));
-    }
-    rect(-skinSize/2 - 5, -skinSize/2 - 5, skinSize + 10, skinSize + 10, scaleSize(5));
-    
-    // Add "NEW" label for newly unlocked skins
-    if (isNewlyUnlocked) {
-      fill(255, 100, 100);
-      textSize(scaleSize(12));
-      textAlign(CENTER, CENTER);
-      text("NEW!", 0, -skinSize/2 - 15);
-    }
-    
-    // Draw sprite
-    if (isUnlocked && airplaneSkins[i]) {
-      imageMode(CENTER);
-      let scaleFactor = (skinSize * 0.7) / max(airplaneSkins[i].width, airplaneSkins[i].height);
-      image(airplaneSkins[i], 0, 0, airplaneSkins[i].width * scaleFactor, airplaneSkins[i].height * scaleFactor);
-    } else {
-      // Locked icon
-      fill(150, 150, 150);
-      textSize(scaleSize(30));
-      text("🔒", 0, 0);
-    }
-    
-    // Skin number
-    fill(139, 69, 19);
-    textSize(scaleSize(14));
-    textAlign(CENTER, CENTER);
-    text(`Skin ${i + 1}`, 0, skinSize/2 + 15);
-    
-    pop();
-  }
-  
-  // Instructions
-  textAlign(CENTER, CENTER);
-  textSize(scaleSize(16));
-  fill(139, 69, 19);
-  if (newlyUnlockedSkins.length > 0) {
-    text("New skins available! Press number keys to select", width / 2, height / 2 + scaleSize(180));
-    text("You can only change to newly unlocked skins during gameplay", width / 2, height / 2 + scaleSize(210));
-  } else {
-    text("Press number keys (1-" + airplaneSkins.length + ") to select", width / 2, height / 2 + scaleSize(180));
-  }
-  text("Press S to close", width / 2, height / 2 + scaleSize(240));
-  
-  // Unlock info
-  let nextUnlockScore = (unlockedSkins.length) * 100;
-  if (unlockedSkins.length < airplaneSkins.length) {
-    textSize(scaleSize(14));
-    fill(100, 100, 100);
-    text(`Next skin unlocks at ${nextUnlockScore} points`, width / 2, height / 2 + scaleSize(240));
-  }
-}
-
-// ------------------------------
-// Collection Page
-// ------------------------------
+// function to draw the collection page
 function drawCollectionPage() {
-  // Ghibli-style background (gradient)
+  // draw a gradient background (ghibli-style)
   for (let i = 0; i < height; i++) {
     let inter = map(i, 0, height, 0, 1);
     let c = lerpColor(color(135, 206, 250), color(255, 250, 240), inter);
@@ -1077,22 +847,22 @@ function drawCollectionPage() {
     line(0, i, width, i);
   }
   
-  // Draw clouds
+  // draw the clouds
   for (let cloud of clouds) {
     cloud.update();
     cloud.draw();
   }
   
-  // Title - positioned at top
+  // draw the title
   fill(255, 255, 240);
   stroke(139, 69, 19);
   strokeWeight(scaleSize(4));
   textAlign(CENTER, CENTER);
   textSize(scaleSize(36));
   textFont('serif');
-  text("✈️ Airplane Collection ✈️", width / 2, height * 0.08);
+  text("✈️ Airplane Collection", width / 2, height * 0.08);
   
-  // Highest score display - below title
+  // display the highest score and the number of unlocked skins
   textSize(scaleSize(16));
   fill(139, 69, 19);
   stroke(255, 255, 240);
@@ -1100,46 +870,47 @@ function drawCollectionPage() {
   text(`Highest Score: ${highestScore} points`, width / 2, height * 0.13);
   text(`Unlocked: ${unlockedSkins.length}/${airplaneSkins.length} skins`, width / 2, height * 0.16);
   
-  // Display skins in a grid - calculate responsive sizing
+  // display the skins in a grid - calculate responsive sizing
   let cols = 5; // Reduced columns for more space
   let totalRows = ceil(airplaneSkins.length / cols);
   
-  // Calculate available space
-  let topMargin = height * 0.30; // Start below title/score info
-  let bottomMargin = height * 0.25; // Space for instructions at bottom
+  // calculate the available space
+  let topMargin = height * 0.30; 
+  let bottomMargin = height * 0.25; 
   let availableHeight = height - topMargin - bottomMargin;
-  let availableWidth = width * 0.95; // Use 95% of width
+  // use 95% of the width
+  let availableWidth = width * 0.95;
   
-  // Calculate optimal skin size and spacing - ensure text fits
+  // calculate the optimal skin size and spacing
   let maxSkinSize = min(availableWidth / cols * 1.1, availableHeight / totalRows * 0.85);
   let skinSize = min(scaleSize(90), maxSkinSize);
-  // Increased spacing to accommodate text below boxes
+  // increase the spacing in between each box
   let horizontalSpacing = skinSize * 4;
-  let verticalSpacing = skinSize * 2.7; // More vertical space for text
+  let verticalSpacing = skinSize * 2.7;
   
   let startX = width / 2 - (cols - 1) * horizontalSpacing / 2;
   let startY = topMargin;
   
+  // draw the skins in the grid
   for (let i = 0; i < airplaneSkins.length; i++) {
     let col = i % cols;
     let row = floor(i / cols);
     let x = startX + col * horizontalSpacing;
     let y = startY + row * verticalSpacing;
     
-    // Skip drawing if outside visible area (account for text below)
+    // skip drawing if outside visible area
     if (y + skinSize/2 + 50 > height - bottomMargin) {
       continue;
     }
     
     let isUnlocked = unlockedSkins.includes(i);
     let isSelected = currentSkin === i;
-    let unlockScore = i * 100; // Score needed to unlock (0, 100, 200, etc.)
     
-    // Draw skin preview
+    // draw the skin preview
     push();
     translate(x, y);
     
-    // Background box
+    // draw the background box
     if (isSelected) {
       fill(255, 215, 0);
       stroke(139, 69, 19);
@@ -1155,41 +926,39 @@ function drawCollectionPage() {
     }
     rect(-skinSize/2 - 5, -skinSize/2 - 5, skinSize + 10, skinSize + 10, scaleSize(5));
     
-    // Add "SELECTED" label for selected skin
+    // draw the "SELECTED" label for selected skin
     if (isSelected) {
       fill(139, 69, 19);
       textSize(scaleSize(12));
       textAlign(CENTER, CENTER);
       noStroke();
-      text("✓ SELECTED", 0, -skinSize/2 - 18);
+      text("✅ SELECTED", 0, -skinSize/2 - 18);
     }
     
-    // Draw sprite
+    // draw the sprite
     if (isUnlocked && airplaneSkins[i]) {
       imageMode(CENTER);
       let scaleFactor = (skinSize * 0.7) / max(airplaneSkins[i].width, airplaneSkins[i].height);
       image(airplaneSkins[i], 0, 0, airplaneSkins[i].width * scaleFactor, airplaneSkins[i].height * scaleFactor);
     } else {
-      // Locked icon
+      // draw the locked icon
       fill(150, 150, 150);
       textSize(scaleSize(30));
       textAlign(CENTER, CENTER);
       text("🔒", 0, 0);
     }
     
-    // Skin number and status - positioned below box with more space
+    // draw the skin number and status
     noStroke();
     fill(139, 69, 19);
     textSize(scaleSize(14));
     textAlign(CENTER, CENTER);
     text(`Skin ${i + 1}`, 0, skinSize/2 + 20);
     
-    // Removed per request: point indications for locked skins
-    
     pop();
   }
   
-  // Instructions - positioned at bottom
+  // draw the instructions
   textAlign(CENTER, CENTER);
   textSize(scaleSize(14));
   fill(139, 69, 19);
@@ -1197,7 +966,7 @@ function drawCollectionPage() {
   strokeWeight(scaleSize(1));
   text("Press number keys (1-" + min(airplaneSkins.length, 9) + (airplaneSkins.length > 9 ? ", 0 for 10+" : "") + ") to select unlocked skin", width / 2, height * 0.8);
   
-  // Show current selection
+  // draw the current selection
   if (currentSkin >= 0 && currentSkin < airplaneSkins.length) {
     textSize(scaleSize(14));
     fill(255, 215, 0);
@@ -1206,18 +975,17 @@ function drawCollectionPage() {
     text(`Currently selected: Skin ${currentSkin + 1}`, width / 2, height * 0.88);
   }
   
+  // draw the instructions
   textSize(scaleSize(14));
   fill(139, 69, 19);
   stroke(255, 255, 240);
   strokeWeight(scaleSize(1));
-  text("Press ESC or B to go back", width / 2, height * 0.92);
+  text("Press ESC or B to go back to the main page", width / 2, height * 0.92);
 }
 
-// ------------------------------
-// Story Page
-// ------------------------------
+// function to draw the story page
 function drawStoryPage() {
-  // Ghibli-style background (gradient)
+  // draw a gradient background (ghibli-style)
   for (let i = 0; i < height; i++) {
     let inter = map(i, 0, height, 0, 1);
     let c = lerpColor(color(135, 206, 250), color(255, 250, 240), inter);
@@ -1225,13 +993,13 @@ function drawStoryPage() {
     line(0, i, width, i);
   }
   
-  // Draw clouds
+  // draw the clouds
   for (let cloud of clouds) {
     cloud.update();
     cloud.draw();
   }
   
-  // Title
+  // draw the title
   fill(255, 255, 240);
   stroke(139, 69, 19);
   strokeWeight(scaleSize(4));
@@ -1244,7 +1012,7 @@ function drawStoryPage() {
   fill(255, 255, 240);
   text("The Wind Rises", width / 2, height / 2 - scaleSize(200));
   
-  // Story content
+  // draw the story about the film
   textAlign(LEFT, TOP);
   textSize(scaleSize(16));
   fill(139, 69, 19);
@@ -1253,24 +1021,25 @@ function drawStoryPage() {
   
   let storyText = [
     "“The Wind Rises” is a 2013 Studio Ghibli film directed by Hayao Miyazaki.",
-    "It follows the life of Jirō Horikoshi, the engineer who designed fighter",
-    "aircraft during the era of World War II.",
+    "The movie talks about the life of Jirō Horikoshi, the aviation engineer who designed fighter",
+    "aircraft for World War II.",
     "",
-    "Since childhood, Jirō has chased his dream of becoming an aviation engineer.",
-    "The film also portrays his romantic relationship with Nahoko, who suffers",
+    "Since childhood, Jirō has been pursuing his dream of becoming an aviation engineer.",
+    "The film also talks about his romantic relationship with Nahoko, who suffers",
     "from a serious illness.",
     "",
     "Through Jirō’s journey, the movie beautifully depicts the harsh realities",
-    "of war, the pursuit of innovation, and the delicate, heartfelt connections",
+    "of war, and the authentic, beautiful connections",
     "between people."
   ];
   
+  // draw the story text
   let startY = height / 2 - scaleSize(150);
   for (let i = 0; i < storyText.length; i++) {
     text(storyText[i], width / 2 - scaleSize(350), startY + i * scaleSize(25));
   }
   
-  // Back button
+  // draw the back button
   textAlign(CENTER, CENTER);
   textSize(scaleSize(18));
   fill(139, 69, 19);
@@ -1278,64 +1047,64 @@ function drawStoryPage() {
   strokeWeight(scaleSize(1));
   text("Press ESC or B to go back", width / 2, height / 2 + scaleSize(200));
   
-  // Hide Leaderboard button on Story page
+  // hide the leaderboard button on the story page
   if (leaderboardButton) leaderboardButton.hide();
   if (collectionButton) collectionButton.hide();
   if (storyButton) storyButton.hide();
   if (nameInput) nameInput.hide();
 }
-
-// ------------------------------
-// Leaderboard Display
-// ------------------------------
+  
+// function to draw the leaderboard
 function drawLeaderboard() {
-  // Hide all buttons and name input when leaderboard is shown
+  // hide all buttons and name input as well when the leaderboard is shown
   if (leaderboardButton) leaderboardButton.hide();
   if (collectionButton) collectionButton.hide();
   if (storyButton) storyButton.hide();
   if (nameInput) nameInput.hide();
   
-  // Background overlay
+  // draw the background overlay
   fill(0, 0, 0, 150);
   noStroke();
   rect(0, 0, width, height);
   
-  // Leaderboard box
+  // draw the leaderboard box
   let boxWidth = scaleSize(500);
   let boxHeight = scaleSize(400);
   fill(255, 250, 240);
   strokeWeight(scaleSize(4));
   rect(width / 2 - boxWidth / 2, height / 2 - boxHeight / 2, boxWidth, boxHeight, scaleSize(20));
   
-  // Title
+  // draw the title
   fill(139, 69, 19);
   textAlign(CENTER, CENTER);
   textSize(scaleSize(32));
-  text("🏆 Leaderboard 🏆", width / 2, height / 2 - scaleSize(160));
+  text("🏆 Leaderboard", width / 2, height / 2 - scaleSize(160));
   
-  // Rankings
+  // draw the rankings
   textSize(scaleSize(20));
   fill(139, 69, 19);
   textAlign(LEFT, CENTER);
   
+  // draw the rankings
   if (leaderboard.length === 0) {
     textAlign(CENTER, CENTER);
     text("No records yet", width / 2, height / 2);
   } else {
     let startY = height / 2 - scaleSize(100);
+    // go through each entry in the leaderboard
     for (let i = 0; i < min(leaderboard.length, 10); i++) {
       let entry = leaderboard[i];
       let y = startY + i * scaleSize(30);
       
-      // Rank display
+      // draw the rank
       fill(139, 69, 19);
       text(`${i + 1}.`, width / 2 - scaleSize(220), y);
       
-      // Name
+      // draw the name
       fill(50, 50, 50);
       text(entry.name, width / 2 - scaleSize(180), y);
       
-      // Score
+      // draw the score
       fill(200, 50, 50);
       textAlign(RIGHT, CENTER);
       text(`${entry.score} pts`, width / 2 + scaleSize(200), y);
@@ -1343,18 +1112,16 @@ function drawLeaderboard() {
     }
   }
   
-  // Close button
+  // draw the close button
   textAlign(CENTER, CENTER);
   textSize(scaleSize(18));
   fill(139, 69, 19);
   text("Press L to close", width / 2, height / 2 + scaleSize(150));
 }
 
-// ------------------------------
-// Play Game
-// ------------------------------
+// function to draw the game
 function playGame() {
-  // Ghibli-style background
+  // draw a gradient background (ghibli-style)
   for (let i = 0; i < height; i++) {
     let inter = map(i, 0, height, 0, 1);
     let c = lerpColor(color(135, 206, 250), color(255, 250, 240), inter);
@@ -1362,7 +1129,7 @@ function playGame() {
     line(0, i, width, i);
   }
   
-  // Draw clouds
+  // draw the clouds
   for (let cloud of clouds) {
     cloud.update();
     cloud.draw();
@@ -1370,6 +1137,7 @@ function playGame() {
 
   let controls = updateControls();
 
+  // check if the plane is boosting and if the boost energy is greater than 0
   if (controls.boosting && boostEnergy > 0) {
     boostEnergy -= boostDrainRate;
     boostEnergy = max(0, boostEnergy);
@@ -1378,38 +1146,43 @@ function playGame() {
     boostEnergy = min(100, boostEnergy);
   }
 
+  // update the plane
   plane.update(controls.moveUp, controls.moveDown);
+  // draw the plane
   plane.draw();
 
+  // update the difficulty timer
   difficultyTimer++;
   if (difficultyTimer >= 900) {
+    // increase the difficulty
     difficulty += 0.2;
+    // reset the difficulty timer
     difficultyTimer = 0;
   }
 
-  // Spawn stars
+  // spawn stars
   starTimer--;
   if (starTimer <= 0) {
     stars.push(new Star());
-    starTimer = random(60, 120) / difficulty;
+    starTimer = random(10, 30) / difficulty;
   }
 
-  // Spawn bombs
+  // spawn bombs
   bombTimer--;
   if (bombTimer <= 0) {
     bombs.push(new Bomb());
-    // Increase bomb frequency by shortening the spawn interval
-    bombTimer = random(50, 110) / difficulty;
+    // increase bomb frequency by shortening the spawn interval
+    bombTimer = random(10, 30) / difficulty;
   }
 
-  // Spawn hearts
+  // spawn hearts
   heartSpawnTimer--;
   if (heartSpawnTimer <= 0) {
     hearts_items.push(new HeartItem());
     heartSpawnTimer = random(600, 1200);
   }
 
-  // Update stars
+  // update stars
   for (let i = stars.length - 1; i >= 0; i--) {
     stars[i].update();
     stars[i].draw();
@@ -1417,7 +1190,7 @@ function playGame() {
     if (plane.collidesWith(stars[i])) {
       score += 10;
       stars.splice(i, 1);
-      // Send signal to Arduino to light up LEDs when star is collected
+      // send signal (1, 0) to Arduino to light up LEDs when star is collected
       if (port && port.opened()) {
         port.write('1');
       }
@@ -1427,56 +1200,59 @@ function playGame() {
     if (stars[i].offScreen()) stars.splice(i, 1);
   }
 
-  // Update bombs
+  // update bombs
   for (let i = bombs.length - 1; i >= 0; i--) {
     bombs[i].update();
     bombs[i].draw();
 
+    // if the plane collides with a bomb, decrease the number of hearts and remove the bomb
     if (plane.collidesWith(bombs[i])) {
       hearts--;
       bombs.splice(i, 1);
 
+      // if the number of hearts is less than or equal to 0, end the game
       if (hearts <= 0) {
         gameState = "GAMEOVER";
       }
       continue;
     }
 
+    // if the bomb is off the screen, remove it
     if (bombs[i].offScreen()) bombs.splice(i, 1);
   }
 
-  // Update heart items
+  // update heart items
   for (let i = hearts_items.length - 1; i >= 0; i--) {
     hearts_items[i].update();
     hearts_items[i].draw();
 
+    // if the plane collides with a heart item, increase the number of hearts and remove the heart item
     if (plane.collidesWith(hearts_items[i])) {
       hearts = min(hearts + 1, 3);
       hearts_items.splice(i, 1);
       continue;
     }
 
+    // if the heart item is off the screen, remove it
     if (hearts_items[i].offScreen()) hearts_items.splice(i, 1);
   }
 
   drawUI();
   
-  // Draw unlock animation
+  // draw the unlock animation
   if (unlockAnimation && unlockAnimation.active) {
     drawUnlockAnimation();
   }
 }
 
-// ------------------------------
-// UI Drawing
-// ------------------------------
+// function to draw the UI
 function drawUI() {
-  // Calculate Connect Serial button dimensions
-  let buttonHeight = scaleSize(40); // Approximate button height including padding
-  let buttonWidth = scaleSize(140); // Approximate button width
-  let scoreY = scaleSize(10) + buttonHeight + scaleSize(10); // Position below button
+  // calculate the dimensions of the connect serial button
+  let buttonHeight = scaleSize(40); 
+  let buttonWidth = scaleSize(140); 
+  let scoreY = scaleSize(10) + buttonHeight + scaleSize(10);
   
-  // Score text - positioned below Connect Serial button
+  // draw the score text
   fill(255);
   stroke(0);
   strokeWeight(scaleSize(3));
@@ -1484,23 +1260,22 @@ function drawUI() {
   textSize(scaleSize(24));
   text(`Score: ${score}`, scaleSize(20), scoreY);
 
-  // Hearts section - positioned on the right side
+  // draw the hearts section
   textAlign(RIGHT, TOP);
   textSize(scaleSize(20));
   fill(255);
   stroke(0);
   strokeWeight(scaleSize(2));
   
-  // Calculate hearts position to avoid overlap
+  // calculate the position of the hearts to avoid overlap
   let heartsLabelX = width - scaleSize(20);
   let heartIconSize = scaleSize(20);
-  let heartSpacing = scaleSize(25); // Space between hearts
+  let heartSpacing = scaleSize(25); 
   let heartsStartX = heartsLabelX - (hearts * heartSpacing);
   
-  // Draw "Hearts:" label
   text("Hearts:", heartsStartX - scaleSize(10), scaleSize(20));
   
-  // Draw heart icons with proper spacing
+  // draw the heart icons with proper spacing
   for (let i = 0; i < hearts; i++) {
     fill(255, 0, 0);
     noStroke();
@@ -1515,6 +1290,7 @@ function drawUI() {
     pop();
   }
 
+  // draw the boost section
   textAlign(LEFT, TOP);
   textSize(scaleSize(16));
   stroke(139, 69, 19);
@@ -1526,6 +1302,7 @@ function drawUI() {
   strokeWeight(scaleSize(2));
   rect(scaleSize(80), scoreY + scaleSize(35), scaleSize(120), scaleSize(15), scaleSize(5));
 
+  // draw the boost energy bar and change color based on the boost energy
   let energyColor =
     boostEnergy > 66 ? color(100, 200, 100) :
     boostEnergy > 33 ? color(255, 200, 100) :
@@ -1535,32 +1312,35 @@ function drawUI() {
   noStroke();
   rect(scaleSize(80), scoreY + scaleSize(35), (boostEnergy / 100) * scaleSize(120), scaleSize(15), scaleSize(5));
   
-  // Display skin info
+  // draw the skin info
   textSize(scaleSize(14));
   fill(255, 250, 240);
   stroke(139, 69, 19);
   strokeWeight(scaleSize(1));
   text(`Skin: ${currentSkin + 1}/${airplaneSkins.length}`, scaleSize(20), scoreY + scaleSize(65));
   let nextUnlockScore = (unlockedSkins.length) * 100;
+  // draw the next skin info
   if (unlockedSkins.length < airplaneSkins.length) {
     let pointsNeeded = nextUnlockScore - score;
     if (pointsNeeded > 0) {
       text(`Next skin in: ${pointsNeeded} pts`, scaleSize(20), scoreY + scaleSize(85));
     } else {
-      text(`All skins unlocked!`, scaleSize(20), scoreY + scaleSize(85));
+      // if all skins are unlocked, draw the text "All skins are unlocked! Great Job!"
+      text(`All skins are unlocked! Great Job!`, scaleSize(20), scoreY + scaleSize(85));
     }
   } else {
-    text(`All skins unlocked!`, scaleSize(20), scoreY + scaleSize(85));
+    // if all skins are unlocked, draw the text "All skins are unlocked! Great Job!"
+    text(`All skins are unlocked! Great Job!`, scaleSize(20), scoreY + scaleSize(85));
   }
   
-  // Fullscreen button hint
+  // draw the fullscreen button hint
   textSize(scaleSize(12));
   fill(139, 69, 19);
   stroke(255, 250, 240);
   strokeWeight(scaleSize(1));
   text("F: Fullscreen", width - scaleSize(150), height - scaleSize(30));
   
-  // Sensor status
+  // draw the sensor status
   if (useSensor && port && port.opened()) {
     textSize(scaleSize(12));
     fill(0, 200, 0);
@@ -1578,18 +1358,16 @@ function drawUI() {
   }
 }
 
-// ------------------------------
-// Unlock Animation
-// ------------------------------
+// function to draw the unlock animation
 function drawUnlockAnimation() {
   if (!unlockAnimation || !unlockAnimation.active) return;
   
-  // Semi-transparent overlay
+  // draw a semi-transparent overlay
   fill(0, 0, 0, 180);
   noStroke();
   rect(0, 0, width, height);
   
-  // Animation box
+  // draw the animation box
   let boxWidth = scaleSize(400);
   let boxHeight = scaleSize(300);
   fill(255, 250, 240);
@@ -1597,19 +1375,20 @@ function drawUnlockAnimation() {
   strokeWeight(scaleSize(5));
   rect(width / 2 - boxWidth / 2, height / 2 - boxHeight / 2, boxWidth, boxHeight, scaleSize(20));
   
-  // Title
+  // draw the title
   fill(255, 215, 0);
   textAlign(CENTER, CENTER);
   textSize(scaleSize(36));
   textFont('serif');
-  text("🎉 NEW SKIN UNLOCKED! 🎉", width / 2, height / 2 - scaleSize(100));
+  text("🎉 NEW SKIN UNLOCKED!", width / 2, height / 2 - scaleSize(100));
   
-  // Draw unlocked skin with animation
+  // draw the unlocked skin with animation
   push();
   translate(width / 2, height / 2);
   rotate(unlockAnimation.rotation);
   scale(unlockAnimation.scale);
   
+  // draw the unlocked skin
   if (airplaneSkins[unlockAnimation.skinIndex]) {
     imageMode(CENTER);
     let skinImg = airplaneSkins[unlockAnimation.skinIndex];
@@ -1619,12 +1398,12 @@ function drawUnlockAnimation() {
   }
   pop();
   
-  // Instructions
+  // draw the instructions
   textSize(scaleSize(18));
   fill(139, 69, 19);
   text("Visit Airplane Collection to select this skin!", width / 2, height / 2 + scaleSize(80));
   
-  // Progress indicator
+  // draw the progress indicator
   let progress = unlockAnimation.timer / unlockAnimation.duration;
   if (progress < 0.3) {
     textSize(scaleSize(14));
@@ -1633,11 +1412,9 @@ function drawUnlockAnimation() {
   }
 }
 
-// ------------------------------
-// Game Over Screen
-// ------------------------------
+// function to draw the game over screen
 function drawGameOverScreen() {
-  // Ghibli-style background
+  // draw a gradient background (ghibli-style)
   for (let i = 0; i < height; i++) {
     let inter = map(i, 0, height, 0, 1);
     let c = lerpColor(color(135, 206, 250), color(255, 250, 240), inter);
@@ -1645,12 +1422,13 @@ function drawGameOverScreen() {
     line(0, i, width, i);
   }
   
-  // Draw clouds
+  // draw the clouds
   for (let cloud of clouds) {
     cloud.update();
     cloud.draw();
   }
 
+  // draw the game over text
   fill(200, 50, 50);
   stroke(139, 69, 19);
   textAlign(CENTER, CENTER);
@@ -1662,6 +1440,7 @@ function drawGameOverScreen() {
   textSize(scaleSize(36));
   text(`Final Score: ${score} pts`, width / 2, height / 2 - scaleSize(30));
   
+  // draw the player name
   if (playerName) {
     textSize(scaleSize(24));
     fill(139, 69, 19);
@@ -1678,122 +1457,61 @@ function drawGameOverScreen() {
   stroke(255, 250, 240);
   text("Press L to view Leaderboard", width / 2, height / 2 + scaleSize(140));
   
-  // Show leaderboard
+  // show the leaderboard if active
   if (showLeaderboard) {
     drawLeaderboard();
   }
 }
 
-// ------------------------------
-// Key Presses
-// ------------------------------
+// function to handle the key presses
 function keyPressed() {
   if (keyCode === ENTER) {
     if (gameState === "LANDING") {
-      // Get username
+      // get the username
       playerName = nameInput.value();
       if (!playerName || playerName.trim() === "") {
         playerName = "Anonymous";
       }
-      // Move to instructions page
+      // move to the instructions page
       nameInput.hide();
+      // hide all buttons on the landing page
       if (collectionButton) collectionButton.hide();
       if (storyButton) storyButton.hide();
       if (leaderboardButton) leaderboardButton.hide();
       gameState = "INSTRUCTIONS";
     } else if (gameState === "INSTRUCTIONS") {
-      // Start the game immediately
-      resetGame();
-      gameState = "PLAYING";
-    } else if (gameState === "START") {
-      // Start the game
+      // start the game immediately
       resetGame();
       gameState = "PLAYING";
     } else if (gameState === "GAMEOVER") {
-      // Save score to leaderboard and return to landing
+      // save the score to the leaderboard and return to the landing page
       saveToLeaderboard(playerName, score);
       nameInput.show();
+      // show all buttons on the landing page
       if (collectionButton) collectionButton.show();
       if (storyButton) storyButton.show();
       if (leaderboardButton) leaderboardButton.show();
       resetGame();
       gameState = "LANDING";
-      selectedMode = "";
     }
   }
 
-  // Toggle leaderboard
+  // toggle the leaderboard
   if (keyCode === 76 || keyCode === 108) { // L key
-    if (gameState === "LANDING" || gameState === "START" || gameState === "GAMEOVER") {
+    if (gameState === "LANDING" || gameState === "GAMEOVER") {
       showLeaderboard = !showLeaderboard;
-      if (showLeaderboard) {
-        showSkinSelection = false;
-      }
     }
   }
   
-  // Toggle skin selection (only in START state or when new skin is unlocked)
-  if (keyCode === 83 || keyCode === 115) { // S key
-    if (gameState === "START" || gameState === "GAMEOVER" || gameState === "PLAYING") {
-      // Only allow opening collection if there are newly unlocked skins or in START/GAMEOVER
-      if (gameState === "PLAYING" && newlyUnlockedSkins.length === 0) {
-        // Don't allow opening collection during gameplay unless new skin is unlocked
-        return;
-      }
-      showSkinSelection = !showSkinSelection;
-      if (showSkinSelection) {
-        showLeaderboard = false;
-        if (unlockAnimation) {
-          unlockAnimation.active = false;
-          unlockAnimation = null;
-        }
-      }
-    }
-  }
-  
-  // Select skin with number keys (1-9, 0 for 10, etc.)
-  if (showSkinSelection) {
-    let skinIndex = -1;
-    if (keyCode >= 49 && keyCode <= 57) { // Keys 1-9
-      skinIndex = keyCode - 49; // Convert to 0-8
-    } else if (keyCode === 48) { // Key 0
-      skinIndex = 9;
-    }
-    
-    if (skinIndex >= 0 && skinIndex < airplaneSkins.length) {
-      if (unlockedSkins.includes(skinIndex)) {
-        // Check if this is a newly unlocked skin (for collection mode)
-        if (newlyUnlockedSkins.includes(skinIndex)) {
-          // Allow skin change only if it's a newly unlocked skin
-          currentSkin = skinIndex;
-          plane.setSkin(currentSkin);
-          localStorage.setItem('skyCollectorCurrentSkin', currentSkin.toString());
-          // Remove from newly unlocked list
-          newlyUnlockedSkins = newlyUnlockedSkins.filter(s => s !== skinIndex);
-          skinChangeAllowed = true;
-          // Close skin selection after choosing
-          showSkinSelection = false;
-        } else if (gameState === "START" || gameState === "GAMEOVER") {
-          // Allow changing to any unlocked skin in START/GAMEOVER states
-          currentSkin = skinIndex;
-          plane.setSkin(currentSkin);
-          localStorage.setItem('skyCollectorCurrentSkin', currentSkin.toString());
-          showSkinSelection = false;
-        }
-        // In PLAYING state, only allow changing to newly unlocked skins
-      }
-    }
-  }
-  
-  // Fullscreen mode
+  // toggle the fullscreen mode
   if (keyCode === 70 || keyCode === 102) { // F key
     let fs = fullscreen();
     fullscreen(!fs);
   }
   
-  // Handle Collection Page
+  // handle the collection page
   if (gameState === "COLLECTION_PAGE") {
-    // Go back to landing
+    // go back to the landing page
     if (keyCode === ESCAPE || keyCode === 66 || keyCode === 98) { // ESC or B key
       gameState = "LANDING";
       nameInput.show();
@@ -1802,30 +1520,32 @@ function keyPressed() {
       if (leaderboardButton) leaderboardButton.show();
     }
     
-    // Select skin with number keys (1-9, 0 for 10, etc.)
+    // select the skin with the number keys
     let skinIndex = -1;
-    if (keyCode >= 49 && keyCode <= 57) { // Keys 1-9
-      skinIndex = keyCode - 49; // Convert to 0-8
-    } else if (keyCode === 48) { // Key 0
+    // if the key is a number key, then set the skin index to the key code minus 49
+    if (keyCode >= 49 && keyCode <= 57) { 
+      skinIndex = keyCode - 49;
+    } else if (keyCode === 48) {
       skinIndex = 9;
     }
-    
+
+    // if the skin index is valid, then set the current skin to the skin index
     if (skinIndex >= 0 && skinIndex < airplaneSkins.length) {
       if (unlockedSkins.includes(skinIndex)) {
         currentSkin = skinIndex;
         plane.setSkin(currentSkin);
         localStorage.setItem('skyCollectorCurrentSkin', currentSkin.toString());
         console.log("Skin selected:", skinIndex);
-        // Visual feedback - the selected skin will be highlighted in the next draw cycle
+        // draw the selected skin in the next draw cycle
       } else {
         console.log("Skin", skinIndex + 1, "is locked. Unlock at", skinIndex * 100, "points");
       }
     }
   }
   
-  // Handle Story Page
+  // handle the story page
   if (gameState === "STORY_PAGE") {
-    // Go back to landing
+    // go back to the landing page
     if (keyCode === ESCAPE || keyCode === 66 || keyCode === 98) { // ESC or B key
       gameState = "LANDING";
       nameInput.show();
@@ -1834,12 +1554,10 @@ function keyPressed() {
   }
 }
 
-// ------------------------------
-// Reset Game
-// ------------------------------
+// function to reset the game
 function resetGame() {
   plane.reset();
-  // Keep current skin selection, don't reset to 0
+  // keep the current skin selection, don't reset to 0 though
   plane.setSkin(currentSkin);
   stars = [];
   bombs = [];
@@ -1852,37 +1570,34 @@ function resetGame() {
   boostEnergy = 100;
   difficulty = 1;
   difficultyTimer = 0;
-  // Don't reset currentSkin - keep player's selection
-  // Reset unlock animation and newly unlocked skins
+  // reset the unlock animation and newly unlocked skins
   unlockAnimation = null;
   newlyUnlockedSkins = [];
-  skinChangeAllowed = false;
   
-  // Reset clouds
+  // reset the clouds
   clouds = [];
   for (let i = 0; i < 5; i++) {
     clouds.push(new Cloud());
   }
 }
 
-// ------------------------------
-// Window Resized
-// ------------------------------
+// function to handle resizing the window
 function windowResized() {
   resizeCanvas(windowWidth, windowHeight);
-  // Update name input position when canvas resizes
+  // update the name input position when the canvas resizes
   updateNameInputPosition();
   
-  // Update connect button position
+  // update the connect button position
   if (connectButton) {
     connectButton.position(scaleSize(10), scaleSize(10));
   }
   
-  // Update button positions
+  // update the button positions
   updateLandingPageButtonPositions();
   if (leaderboardButton && gameState === "LANDING") {
     updateLeaderboardButtonPosition();
   }
+  // update the button positions for the landing page
   if (collectionButton && storyButton && (gameState === "COLLECTION_PAGE" || gameState === "STORY_PAGE")) {
     updateButtonPositions();
   }

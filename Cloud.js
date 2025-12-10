@@ -7,7 +7,7 @@ class Cloud {
     // vary in size 
     this.size = random(60, 120);
     // set the speed to 5
-    this.speed = 5; 
+    this.speed = 15; 
   }
 
   update() {

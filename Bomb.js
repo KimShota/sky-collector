@@ -3,7 +3,7 @@ class Bomb {
     this.x = width + 20; // appears outside of the canvas first 
     this.y = random(50, height - 50); // random y position 
     this.size = 30;
-    this.speed = 5;
+    this.speed = 15;
   }
 
   update() {

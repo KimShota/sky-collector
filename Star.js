@@ -6,7 +6,7 @@ class Star {
     this.x = width + 20;
     this.y = random(50, height - 50);
     this.size = 25;
-    this.speed = 5;
+    this.speed = 15;
     this.rotation = 0;
   }
 
